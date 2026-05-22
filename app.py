@@ -38,9 +38,48 @@ def add_student():
 
     # Send response
     return jsonify({
-        "message": "Student added successfully"
+        "message": "Student added successfully ",
+        "id":student.id
     })
+#finding student details by id
+@app.route('/student/<int:id>', methods=['GET'])
+def get_student(id):
 
+    # Find student by id
+    student = Student.query.get(id)
+
+    # If student not found
+    if not student:
+        return jsonify({
+            "message": "Student not found"
+        }), 404
+
+    # Return student details
+    return jsonify({
+        "id": student.id,
+        "first_name": student.first_name,
+        "class_name": student.class_name,
+        "email": student.email
+    })
+@app.route('/students', methods=['GET'])
+def get_all_students():
+
+    # Get all students
+    students = Student.query.all()
+
+    # Convert objects into list
+    student_list = []
+
+    for student in students:
+        student_list.append({
+            "id": student.id,
+            "first_name": student.first_name,
+            "class_name": student.class_name,
+            "email": student.email
+        })
+
+    # Return list
+    return jsonify(student_list)
 # Run application
 if __name__ == '__main__':
 
