@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Create Flask application
 app = Flask(__name__)
@@ -18,6 +19,12 @@ class Student(db.Model):
     class_name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
 
+#create user table
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), unique=True, nullable=False)
+    password = db.Column(db.String(300), nullable=False)    
+
 
 # Create POST API
 @app.route('/student', methods=['POST'])
@@ -31,7 +38,7 @@ def add_student():
 
     if existing_student:
         return {
-            "message": "already registered"
+            "message": "email  already registered"
         }
 
     # Create student object
@@ -173,12 +180,74 @@ def search_student():
         })
 
     return jsonify(student_list)
+# SIGNUP API
+@app.route('/signup', methods=['POST'])
+def signup():
+
+    data = request.get_json()
+
+    username = data.get('username')
+    password = data.get('password')
+
+    # Check if user already exists
+    existing_user = User.query.filter_by(username=username).first()
+
+    if existing_user:
+        return jsonify({
+            "message": "Username already exists"
+        }), 400
+
+    # Encrypt password
+    hashed_password = generate_password_hash(password)
+
+    # Save user
+    new_user = User(
+        username=username,
+        password=hashed_password
+    )
+
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify({
+        "message": "User registered successfully"
+    }), 201
+
+# LOGIN API 
+@app.route('/login', methods=['POST'])
+def login():
+
+    data = request.get_json()
+
+    username = data.get('username')
+    password = data.get('password')
+
+    # Find user
+    user = User.query.filter_by(username=username).first()
+
+    if not user:
+        return jsonify({
+            "message": "User not found"
+        }), 404
+
+    # Compare encrypted password
+    if check_password_hash(user.password, password):
+
+        return jsonify({
+            "message": "Logged in successfully"
+        }), 200
+
+    else:
+        return jsonify({
+            "message": "Invalid password"
+        }), 401
+
 # Run application
 if __name__ == '__main__':
 
     # Create database and tables
     with app.app_context():
         db.create_all()
-
+   
     # Run on custom port
     app.run(debug=True, port=8000)
